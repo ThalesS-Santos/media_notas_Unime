@@ -166,4 +166,4 @@ if 0 < pontos_em_aberto < 10 and nota_atual < media_alvo:
 if nota_atual >= media_alvo:
     st.balloons()
 
-st.markdown("<br><p style='text-align: center; color: #94a3b8; font-size: 0.8rem;'>Feito para a melhor estudante de medicina da UNIME ❤️</p>", unsafe_allow_html=True)
+st.markdown("<br><p style='text-align: center; color: #94a3b8; font-size: 0.8rem;'>Feito para a melhor estudante de medicina ❤️</p>", unsafe_allow_html=True)
