@@ -1,95 +1,91 @@
 import streamlit as st
 
-# Configuração da página
-st.set_page_config(page_title="Calculadora de Média Acadêmica", page_icon="🎓")
+st.set_page_config(page_title="Calculadora Medicina UNIME", page_icon="🩺")
 
-# Estilo customizado simples
+# Estilo para parecer um dashboard médico/acadêmico
 st.markdown("""
     <style>
-    .main {
-        background-color: #f5f7f9;
-    }
-    .stMetric {
-        background-color: #ffffff;
-        padding: 15px;
+    .stApp { background-color: #f0f4f8; }
+    .metric-card {
+        background-color: white;
+        padding: 20px;
         border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border-left: 5px solid #2e5a88;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
     }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🎓 Calculadora de Média")
-st.subheader("Organize suas notas e planeje seu semestre!")
+st.title("🩺 Calculadora de Notas - Medicina")
+st.subheader("Sistema de Avaliação UNIME")
 
-# Sidebar para configurações
-with st.sidebar:
-    st.header("Configurações")
-    media_aprovacao = st.number_input("Média para aprovação:", min_value=0.0, max_value=10.0, value=7.0, step=0.5)
-    qtd_provas = st.number_input("Quantidade total de provas:", min_value=1, max_value=10, value=3)
-    st.info("Dica: Você pode mudar a média necessária se sua faculdade exigir algo diferente de 7.0.")
+# Dicionário com os pesos conforme a foto
+pesos = {
+    "PBL (5 etapas)": 2.0,
+    "TBL - gRAT (Grupo)": 1.0,
+    "TBL - iRAT (Individual)": 1.5,
+    "Prova Teórica": 3.4,
+    "Lab. Práticas Integradas": 0.7,
+    "Lab. Morfofuncional": 1.4
+}
 
-st.divider()
+st.info("💡 Insira sua nota de 0 a 10 em cada categoria. O sistema calculará o peso automaticamente.")
 
-# Entrada de notas
 col1, col2 = st.columns([1, 1])
-
-notas = []
-notas_preenchidas = 0
-soma_notas = 0.0
+notas_finais = {}
 
 with col1:
-    st.write("### Suas Notas")
-    for i in range(int(qtd_provas)):
-        nota = st.text_input(f"Nota da Prova {i+1}:", value="", key=f"p{i}")
-        if nota != "":
+    st.markdown("### 📝 Notas Inseridas")
+    for nome, peso_max in pesos.items():
+        # Input de 0 a 10
+        nota_input = st.text_input(f"{nome} (Vale {peso_max} pts)", value="", help=f"Quanto você tirou de 0 a 10 nesta categoria?")
+        
+        if nota_input:
             try:
-                n = float(nota.replace(',', '.'))
-                if 0 <= n <= 10:
-                    notas.append(n)
-                    notas_preenchidas += 1
-                    soma_notas += n
-                else:
-                    st.warning(f"A nota da Prova {i+1} deve ser entre 0 e 10.")
+                valor = float(nota_input.replace(',', '.'))
+                # Cálculo da regra de três: (nota/10) * peso_max
+                nota_final = (valor / 10) * peso_max
+                notas_finais[nome] = nota_final
             except ValueError:
-                st.error(f"Por favor, insira um número válido na Prova {i+1}.")
-
-# Cálculos e Lógica
-media_atual = soma_notas / notas_preenchidas if notas_preenchidas > 0 else 0.0
-provas_restantes = int(qtd_provas) - notas_preenchidas
+                st.error(f"Insira um número válido para {nome}")
 
 with col2:
-    st.write("### Resumo")
+    st.markdown("### 📊 Resultado Parcial")
     
-    if notas_preenchidas > 0:
-        # Cor da métrica baseada na média
-        status_cor = "normal" if media_atual >= media_aprovacao else "inverse"
-        st.metric("Sua Média Atual", f"{media_atual:.2f}")
+    nota_total = sum(notas_finais.values())
+    pontos_preenchidos = sum([pesos[k] for k in notas_finais.keys()])
+    pontos_faltantes = 10.0 - pontos_preenchidos
+    
+    # Card de Nota Atual
+    st.markdown(f"""
+        <div class="metric-card">
+            <p style='margin:0; color: #666;'>Sua Pontuação Acumulada</p>
+            <h2 style='margin:0; color: #2e5a88;'>{nota_total:.2f} / 10.0</h2>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.write("")
+    
+    if pontos_preenchidos > 0:
+        media_aprovacao = 7.0 # Geralmente medicina é 7, ajuste se necessário
         
-        progresso = min(media_atual / media_aprovacao, 1.0)
-        st.progress(progresso)
-
-        if media_atual >= media_aprovacao and provas_restantes == 0:
-            st.success("🎉 Parabéns! Você já passou!")
-        elif provas_restantes > 0:
-            # Cálculo de quanto precisa nas próximas
-            nota_total_necessaria = media_aprovacao * qtd_provas
-            nota_faltante = nota_total_necessaria - soma_notas
-            
-            if nota_faltante <= 0:
-                st.success("✅ Você já atingiu a pontuação necessária para passar! Só mantenha o ritmo.")
+        if nota_total >= media_aprovacao:
+            st.success(f"⭐ Parabéns! Você já atingiu a média {media_aprovacao}!")
+            st.balloons()
+        elif pontos_faltantes > 0:
+            falta_para_passar = media_aprovacao - nota_total
+            if falta_para_passar > pontos_faltantes:
+                st.error(f"Atenção: Mesmo gabaritando o que resta ({pontos_faltantes:.2f}), você somaria {nota_total + pontos_faltantes:.2f}. Procure o professor sobre a prova final.")
             else:
-                media_necessaria_proximas = nota_faltante / provas_restantes
-                
-                if media_necessaria_proximas > 10:
-                    st.error(f"Situação difícil: Você precisa de uma média de {media_necessaria_proximas:.2f} nas próximas {provas_restantes} provas para passar.")
-                else:
-                    st.warning(f"Faltam {nota_faltante:.2f} pontos no total.")
-                    st.info(f"Você precisa tirar, em média, **{media_necessaria_proximas:.2f}** nas próximas {provas_restantes} prova(s).")
+                st.warning(f"Faltam **{falta_para_passar:.2f} pontos** para atingir a média {media_aprovacao}.")
+                # Calculando o rendimento necessário nas próximas
+                rendimento = (falta_para_passar / pontos_faltantes) * 10
+                st.write(f"Você precisa de um aproveitamento de **{rendimento:.1f} nas próximas avaliações**.")
     else:
-        st.info("Aguardando o preenchimento da primeira nota para calcular as projeções.")
+        st.write("Aguardando as primeiras notas...")
 
-# Rodapé ou Informação Extra
-st.divider()
-if notas_preenchidas == qtd_provas:
-    if media_atual >= media_aprovacao:
-        st.balloons()
+# Detalhamento Visual
+if notas_finais:
+    with st.expander("Ver detalhamento por peso"):
+        for nome, valor in notas_finais.items():
+            st.write(f"**{nome}:** {valor:.2f} de {pesos[nome]} possíveis.")
